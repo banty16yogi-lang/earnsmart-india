@@ -140,7 +140,18 @@ async function loadDashboard(user) {
 
  
   try {
-    const response = await fetch("/.netlify/functions/get-offers");
+    const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  $("offers").textContent = "Please log in to view offers.";
+  return;
+}
+
+const response = await fetch("/.netlify/functions/get-offers", {
+  headers: {
+    Authorization: `Bearer ${session.access_token}`
+  }
+});
     const data = await response.json();
 
     if (!response.ok || !data.success) {
