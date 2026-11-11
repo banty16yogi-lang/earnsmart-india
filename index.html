@@ -24,47 +24,45 @@ button{padding:12px 16px;border:0;border-radius:8px;background:#087c55;color:whi
 </style>
 </head>
 <body>
-
 <header>
-  <h2>EarnSmart India 🇮🇳</h2>
-  <p>Complete offers. Earn rewards.</p>
+<h2>EarnSmart India 🇮🇳</h2>
+<p>Complete offers. Earn rewards.</p>
 </header>
 
 <main>
-  <section id="auth" class="card">
-    <h2>Welcome to EarnSmart India</h2>
-    <p class="small">Create your account or log in.</p>
-    <input id="email" type="email" placeholder="Email address">
-    <input id="password" type="password" placeholder="Password (minimum 6 characters)">
-    <button onclick="register()">Create Account</button>
-    <button class="secondary" onclick="login()">Login</button>
-    <p id="message"></p>
-  </section>
+<section id="auth" class="card">
+<h2>Welcome to EarnSmart India</h2>
+<p class="small">Create your account or log in.</p>
+<input id="email" type="email" placeholder="Email address">
+<input id="password" type="password" placeholder="Password (minimum 6 characters)">
+<button onclick="register()">Create Account</button>
+<button class="secondary" onclick="login()">Login</button>
+<p id="message"></p>
+</section>
 
-  <section id="dashboard" class="hidden">
-    <div class="card">
-      <h2>My Dashboard</h2>
-      <p id="welcome" class="small"></p>
-      <button class="secondary" onclick="logout()">Logout</button>
-    </div>
+<section id="dashboard" class="hidden">
+<div class="card">
+<h2>My Dashboard</h2>
+<p id="welcome" class="small"></p>
+<button class="secondary" onclick="logout()">Logout</button>
+</div>
 
-    <div class="card">
-      <h3>My Wallet</h3>
-      <div class="balance" id="balance">₹0.00</div>
-      <p class="small">Your current recorded balance</p>
-    </div>
+<div class="card">
+<h3>My Wallet</h3>
+<div class="balance" id="balance">₹0.00</div>
+<p class="small">Your current recorded balance</p>
+</div>
 
-    <div class="card">
-      <h3>Available Offers</h3>
-      <p class="small">Offers will appear here when activated by the administrator.</p>
-      <div id="offers">Loading offers...</div>
-    </div>
+<div class="card">
+<h3>Available Offers</h3>
+<div id="offers">Loading offers...</div>
+</div>
 
-    <div class="card">
-      <h3>My Earning History</h3>
-      <div id="transactions">Loading transactions...</div>
-    </div>
-  </section>
+<div class="card">
+<h3>My Earning History</h3>
+<div id="transactions">Loading transactions...</div>
+</div>
+</section>
 </main>
 
 <script>
@@ -101,9 +99,7 @@ async function login() {
   const email = $("email").value.trim();
   const password = $("password").value;
 
-  const { error } = await db.auth.signInWithPassword({
-    email, password
-  });
+  const { error } = await db.auth.signInWithPassword({ email, password });
 
   if (error) message(error.message);
 }
@@ -130,7 +126,6 @@ async function loadDashboard(user) {
 
   if (profileResult.error) {
     $("balance").textContent = "Unable to load";
-    console.error(profileResult.error);
   } else if (profileResult.data) {
     const amount = Number(profileResult.data.wallet_balance || 0);
     $("balance").textContent = "₹" + amount.toFixed(2);
@@ -138,85 +133,73 @@ async function loadDashboard(user) {
     $("balance").textContent = "Profile not found";
   }
 
- 
+  // Load offers using the verified login session
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } =
+      await db.auth.getSession();
 
-if (!session) {
-  $("offers").textContent = "Please log in to view offers.";
-  return;
-}
+    if (sessionError || !session) {
+      $("offers").textContent = "Please log in again to view offers.";
+      return;
+    }
 
-const response = await fetch("/.netlify/functions/get-offers", {
-  headers: {
-    Authorization: `Bearer ${session.access_token}`
-  }
-});
+    const response = await fetch("/.netlify/functions/get-offers", {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    });
+
     const data = await response.json();
 
     if (!response.ok || !data.success) {
-      $("offers").textContent = "Unable to load OGAds offers. Please try again later.";
+      $("offers").textContent =
+        data.message || "Unable to load offers. Please try again.";
     } else if (!Array.isArray(data.offers) || data.offers.length === 0) {
-      $("offers").textContent = "No offers are available for your location right now.";
+      $("offers").textContent = "No offers are available right now.";
     } else {
-      $("offers").innerHTML = data.offers.map(offer => {
-        const offerLink = String(offer.link || "");
-        const validLink = /^https:\/\//i.test(offerLink);
+      const visibleOffers = data.offers.filter(
+        offer => /^https:\/\//i.test(String(offer.link || ""))
+      );
 
-        return `
-          <div class="offer">
-            ${offer.picture ? `
-              <img
-                src="${safe(offer.picture)}"
-                alt="Offer image"
-                style="width:100%;max-width:180px;border-radius:10px"
-              >
-            ` : ""}
+      if (!visibleOffers.length) {
+        $("offers").textContent =
+          "Offers were received, but their tracking links need verification.";
+      } else {
+        $("offers").innerHTML = visibleOffers.map(offer => {
+          const offerLink = String(offer.link);
 
-            <h4>${safe(offer.name_short || offer.name || "Special Offer")}</h4>
-
-            <p>${safe(offer.description || offer.adcopy || "")}</p>
-
-            <strong>Advertiser payout: $${safe(offer.payout || "0")}</strong>
-
-            <p class="small">
-              Type: ${safe(offer.ctype || "Offer")}
-              | Devices: ${safe(offer.device || "Multiple")}
-            </p>
-
-            ${validLink ? `
-              <a
-                href="${safe(offerLink)}"
-                target="_blank"
-                rel="noopener noreferrer"
-                style="display:inline-block;padding:12px 18px;background:#087c55;color:white;text-decoration:none;border-radius:8px"
-              >Complete Offer</a>
-            ` : ""}
-          </div>
-        `;
-      }).join("");
+          return `
+            <div class="offer">
+              ${offer.picture ? `
+                <img src="${safe(offer.picture)}"
+                     alt="Offer image"
+                     style="width:100%;max-width:180px;border-radius:10px">
+              ` : ""}
+              <h4>${safe(offer.name_short || offer.name || "Special Offer")}</h4>
+              <p>${safe(offer.description || offer.adcopy || "")}</p>
+              <strong>Advertiser payout: $${safe(offer.payout || "0")}</strong>
+              <p class="small">
+                Type: ${safe(offer.ctype || "Offer")}
+                | Devices: ${safe(offer.device || "Multiple")}
+              </p>
+              <a href="${safe(offerLink)}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 style="display:inline-block;padding:12px 18px;background:#087c55;color:white;text-decoration:none;border-radius:8px">
+                Complete Offer
+              </a>
+            </div>
+          `;
+        }).join("");
+      }
     }
   } catch (error) {
     console.error("OGAds error:", error);
-    $("offers").textContent = "Could not connect to the offers service.";
+    $("offers").textContent =
+      "Could not connect to the offers service.";
   }
 
-
-  if (offerResult.error) {
-    $("offers").textContent = "Could not load offers.";
-  } else if (!offerResult.data.length) {
-    $("offers").textContent = "No active offers available yet. Please check again later.";
-  } else {
-    $("offers").innerHTML = offerResult.data.map(offer => `
-      <div class="offer">
-        <h4>${safe(offer.title)}</h4>
-        <p>${safe(offer.description || "")}</p>
-        <strong>Reward: ₹${Number(offer.payout || 0).toFixed(2)}</strong>
-        <p class="small">Network: ${safe(offer.network || "Partner")}</p>
-      </div>
-    `).join("");
-  }
-
+  // Load transaction history
   const historyResult = await db
     .from("transactions")
     .select("id,amount,transaction_type")
@@ -224,7 +207,8 @@ const response = await fetch("/.netlify/functions/get-offers", {
     .limit(20);
 
   if (historyResult.error) {
-    $("transactions").textContent = "Could not load transaction history.";
+    $("transactions").textContent =
+      "Could not load transaction history.";
   } else if (!historyResult.data.length) {
     $("transactions").textContent = "No transactions yet.";
   } else {
@@ -261,6 +245,8 @@ async function checkSession() {
 }
 
 db.auth.onAuthStateChange((event, session) => {
+  if (event === "INITIAL_SESSION") return;
+
   setTimeout(() => {
     if (session) loadDashboard(session.user);
     else {
