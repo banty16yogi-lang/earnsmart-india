@@ -2,105 +2,216 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EarnSmart India</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      color: #172033;
-    }
-    .container {
-      max-width: 400px;
-      margin: 60px auto;
-      padding: 25px;
-      background: white;
-      border-radius: 14px;
-      box-shadow: 0 4px 20px #0001;
-    }
-    h1 { text-align: center; color: #087c55; }
-    p { text-align: center; color: #64748b; }
-    input, button {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 13px;
-      margin-top: 12px;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-    input { border: 1px solid #cbd5e1; }
-    button {
-      border: 0;
-      background: #087c55;
-      color: white;
-      cursor: pointer;
-    }
-    .secondary { background: #1d4ed8; }
-    #message { font-size: 14px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EarnSmart India</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#172033}
+header{background:#087c55;color:white;padding:18px}
+header h2{margin:0}
+main{max-width:900px;margin:25px auto;padding:15px}
+.card{background:white;padding:20px;border-radius:14px;margin-bottom:16px;box-shadow:0 3px 12px #0000000b}
+input{width:100%;padding:13px;margin:8px 0;border:1px solid #cbd5e1;border-radius:8px}
+button{padding:12px 16px;border:0;border-radius:8px;background:#087c55;color:white;cursor:pointer;margin:5px 4px 5px 0}
+.secondary{background:#334155}
+.balance{font-size:32px;font-weight:bold;color:#087c55;margin:12px 0}
+.small{color:#64748b;font-size:14px}
+.offer{border:1px solid #e2e8f0;padding:14px;border-radius:10px;margin:10px 0}
+#message{color:#b45309;overflow-wrap:anywhere}
+.hidden{display:none}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>EarnSmart India</h1>
-    <p>Register and access your earning dashboard.</p>
 
-    <input id="email" type="email" placeholder="Your email address">
+<header>
+  <h2>EarnSmart India 🇮🇳</h2>
+  <p>Complete offers. Earn rewards.</p>
+</header>
+
+<main>
+  <section id="auth" class="card">
+    <h2>Welcome to EarnSmart India</h2>
+    <p class="small">Create your account or log in.</p>
+    <input id="email" type="email" placeholder="Email address">
     <input id="password" type="password" placeholder="Password (minimum 6 characters)">
-
     <button onclick="register()">Create Account</button>
     <button class="secondary" onclick="login()">Login</button>
+    <p id="message"></p>
+  </section>
 
-    <p id="message">Your account is protected by Supabase.</p>
-  </div>
+  <section id="dashboard" class="hidden">
+    <div class="card">
+      <h2>My Dashboard</h2>
+      <p id="welcome" class="small"></p>
+      <button class="secondary" onclick="logout()">Logout</button>
+    </div>
 
-  <script>
-    const SUPABASE_URL = "https://elraijiiwkctvidondrv.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2AbrZM6cKUMA2BLPzWTmVQ_mzrN0xH_";
+    <div class="card">
+      <h3>My Wallet</h3>
+      <div class="balance" id="balance">₹0.00</div>
+      <p class="small">Your current recorded balance</p>
+    </div>
 
-    const db = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY
-    );
+    <div class="card">
+      <h3>Available Offers</h3>
+      <p class="small">Offers will appear here when activated by the administrator.</p>
+      <div id="offers">Loading offers...</div>
+    </div>
 
-    function showMessage(message) {
-      document.getElementById("message").textContent = message;
+    <div class="card">
+      <h3>My Earning History</h3>
+      <div id="transactions">Loading transactions...</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://elraijiiwkctvidondrv.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2AbrZM6cKUMA2BLPzWTmVQ_mzrN0xH_";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+const $ = id => document.getElementById(id);
+
+function message(text) {
+  $("message").textContent = text;
+}
+
+async function register() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  if (!email || password.length < 6) {
+    message("Enter a valid email and password of at least 6 characters.");
+    return;
+  }
+
+  const { error } = await db.auth.signUp({ email, password });
+
+  if (error) message(error.message);
+  else message("Registration submitted. Check your email for confirmation.");
+}
+
+async function login() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  const { error } = await db.auth.signInWithPassword({
+    email, password
+  });
+
+  if (error) message(error.message);
+}
+
+async function logout() {
+  const { error } = await db.auth.signOut();
+  if (error) alert(error.message);
+}
+
+async function loadDashboard(user) {
+  $("auth").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  $("welcome").textContent = "Logged in as " + user.email;
+
+  $("balance").textContent = "Loading...";
+  $("offers").textContent = "Loading offers...";
+  $("transactions").textContent = "Loading history...";
+
+  const profileResult = await db
+    .from("profiles")
+    .select("username,wallet_balance")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileResult.error) {
+    $("balance").textContent = "Unable to load";
+    console.error(profileResult.error);
+  } else if (profileResult.data) {
+    const amount = Number(profileResult.data.wallet_balance || 0);
+    $("balance").textContent = "₹" + amount.toFixed(2);
+  } else {
+    $("balance").textContent = "Profile not found";
+  }
+
+  const offerResult = await db
+    .from("offers")
+    .select("id,title,description,payout,network")
+    .eq("is_active", true);
+
+  if (offerResult.error) {
+    $("offers").textContent = "Could not load offers.";
+  } else if (!offerResult.data.length) {
+    $("offers").textContent = "No active offers available yet. Please check again later.";
+  } else {
+    $("offers").innerHTML = offerResult.data.map(offer => `
+      <div class="offer">
+        <h4>${safe(offer.title)}</h4>
+        <p>${safe(offer.description || "")}</p>
+        <strong>Reward: ₹${Number(offer.payout || 0).toFixed(2)}</strong>
+        <p class="small">Network: ${safe(offer.network || "Partner")}</p>
+      </div>
+    `).join("");
+  }
+
+  const historyResult = await db
+    .from("transactions")
+    .select("id,amount,transaction_type")
+    .order("id", {ascending:false})
+    .limit(20);
+
+  if (historyResult.error) {
+    $("transactions").textContent = "Could not load transaction history.";
+  } else if (!historyResult.data.length) {
+    $("transactions").textContent = "No transactions yet.";
+  } else {
+    $("transactions").innerHTML = historyResult.data.map(item => `
+      <div class="offer">
+        <strong>${safe(item.transaction_type)}</strong>
+        <span> — ₹${Number(item.amount).toFixed(2)}</span>
+      </div>
+    `).join("");
+  }
+}
+
+function safe(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#39;"
+  })[char]);
+}
+
+async function checkSession() {
+  const { data, error } = await db.auth.getSession();
+
+  if (error) {
+    message(error.message);
+    return;
+  }
+
+  if (data.session) {
+    await loadDashboard(data.session.user);
+  } else {
+    $("dashboard").classList.add("hidden");
+    $("auth").classList.remove("hidden");
+  }
+}
+
+db.auth.onAuthStateChange((event, session) => {
+  setTimeout(() => {
+    if (session) loadDashboard(session.user);
+    else {
+      $("dashboard").classList.add("hidden");
+      $("auth").classList.remove("hidden");
     }
+  }, 0);
+});
 
-    async function register() {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      if (!email || password.length < 6) {
-        showMessage("Enter a valid email and password of at least 6 characters.");
-        return;
-      }
-
-      const { error } = await db.auth.signUp({ email, password });
-
-      if (error) {
-        showMessage(error.message);
-      } else {
-        showMessage("Registration submitted. Check your email if confirmation is required.");
-      }
-    }
-
-    async function login() {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      const { data, error } = await db.auth.signInWithPassword({
-        email, password
-      });
-
-      if (error) {
-        showMessage(error.message);
-      } else {
-        showMessage("Welcome! You are logged in: " + data.user.email);
-      }
-    }
-  </script>
+checkSession();
+</script>
 </body>
 </html>
