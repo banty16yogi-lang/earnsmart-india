@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EarnSmart India</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #172033;
+    }
+    .container {
+      max-width: 400px;
+      margin: 60px auto;
+      padding: 25px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px #0001;
+    }
+    h1 { text-align: center; color: #087c55; }
+    p { text-align: center; color: #64748b; }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 13px;
+      margin-top: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    input { border: 1px solid #cbd5e1; }
+    button {
+      border: 0;
+      background: #087c55;
+      color: white;
+      cursor: pointer;
+    }
+    .secondary { background: #1d4ed8; }
+    #message { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>EarnSmart India</h1>
+    <p>Register and access your earning dashboard.</p>
+
+    <input id="email" type="email" placeholder="Your email address">
+    <input id="password" type="password" placeholder="Password (minimum 6 characters)">
+
+    <button onclick="register()">Create Account</button>
+    <button class="secondary" onclick="login()">Login</button>
+
+    <p id="message">Your account is protected by Supabase.</p>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://elraijiiwkctvidondrv.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2AbrZM6cKUMA2BLPzWTmVQ_mzrN0xH_";
+
+    const db = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    function showMessage(message) {
+      document.getElementById("message").textContent = message;
+    }
+
+    async function register() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || password.length < 6) {
+        showMessage("Enter a valid email and password of at least 6 characters.");
+        return;
+      }
+
+      const { error } = await db.auth.signUp({ email, password });
+
+      if (error) {
+        showMessage(error.message);
+      } else {
+        showMessage("Registration submitted. Check your email if confirmation is required.");
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await db.auth.signInWithPassword({
+        email, password
+      });
+
+      if (error) {
+        showMessage(error.message);
+      } else {
+        showMessage("Welcome! You are logged in: " + data.user.email);
+      }
+    }
+  </script>
+</body>
+</html>
