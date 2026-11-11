@@ -138,10 +138,58 @@ async function loadDashboard(user) {
     $("balance").textContent = "Profile not found";
   }
 
-  const offerResult = await db
-    .from("offers")
-    .select("id,title,description,payout,network")
-    .eq("is_active", true);
+ 
+  try {
+    const response = await fetch("/.netlify/functions/get-offers");
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      $("offers").textContent = "Unable to load OGAds offers. Please try again later.";
+    } else if (!Array.isArray(data.offers) || data.offers.length === 0) {
+      $("offers").textContent = "No offers are available for your location right now.";
+    } else {
+      $("offers").innerHTML = data.offers.map(offer => {
+        const offerLink = String(offer.link || "");
+        const validLink = /^https:\/\//i.test(offerLink);
+
+        return `
+          <div class="offer">
+            ${offer.picture ? `
+              <img
+                src="${safe(offer.picture)}"
+                alt="Offer image"
+                style="width:100%;max-width:180px;border-radius:10px"
+              >
+            ` : ""}
+
+            <h4>${safe(offer.name_short || offer.name || "Special Offer")}</h4>
+
+            <p>${safe(offer.description || offer.adcopy || "")}</p>
+
+            <strong>Advertiser payout: $${safe(offer.payout || "0")}</strong>
+
+            <p class="small">
+              Type: ${safe(offer.ctype || "Offer")}
+              | Devices: ${safe(offer.device || "Multiple")}
+            </p>
+
+            ${validLink ? `
+              <a
+                href="${safe(offerLink)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="display:inline-block;padding:12px 18px;background:#087c55;color:white;text-decoration:none;border-radius:8px"
+              >Complete Offer</a>
+            ` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+  } catch (error) {
+    console.error("OGAds error:", error);
+    $("offers").textContent = "Could not connect to the offers service.";
+  }
+
 
   if (offerResult.error) {
     $("offers").textContent = "Could not load offers.";
